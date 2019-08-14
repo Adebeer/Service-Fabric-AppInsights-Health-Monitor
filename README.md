@@ -49,3 +49,77 @@ ServiceFabricMonitorService.exe start
 
 ## Uninstall
 ServiceFabricMonitorService.exe uninstall
+
+# App Insights
+Some KQL (Kusto) queries to help you get started with creating dashboards in App Insights
+
+## Daily SF Node StateTransitions
+
+Below query helps identifying troubled nodes by identifying nodes that when up/down. Likely you want the dashboard to show data from last X days
+
+```
+traces
+| extend node = tostring(customDimensions.['nodeName'])
+| extend eventName = tostring(customDimensions.['eventName'])
+| extend unit = format_datetime(timestamp, 'MM/dd')
+| where severityLevel <= 3 and 
+| where message contains "StateTransition" 
+| project node, eventName, unit
+| summarize state_changes=count() by node, eventName, unit
+| project node, eventName, state_changes, unit
+| sort by node asc
+```
+
+## Average CPU per SF Node
+
+The below query returns average CPU Total Processor performance counter metrics, averaged over 10 minute time intervals
+
+```
+metrics
+| where name == "Total Processor Time"
+| where cloud_RoleName startswith "SF.Node."
+| summarize Avg_CPU=avg(value*100) 
+by cloud_RoleInstance, bin(timestamp, 10m)
+| sort by cloud_RoleInstance asc
+```
+
+## Available Memory per SF Node
+
+Returns the available memory (in GB) per node, averaged over 10 minute intervals
+
+```
+metrics
+| where cloud_RoleName startswith "SF.Node."
+| where name == "Memory - Available MBytes"
+| summarize Min_Free_Gb=min(value/1000.0)
+by cloud_RoleInstance, bin(timestamp, 10m)
+| sort by cloud_RoleInstance asc
+```
+
+## Free Logical Disk space per Node
+
+Per node minimum percentage of free disk space
+
+```
+metrics
+| where cloud_RoleName startswith "SF.Node."
+| where name == "LogicalDisk(_Total) - % Free Space"
+| summarize Percent_Free=min(value)
+by cloud_RoleInstance, bin(timestamp, 30m)
+| sort by cloud_RoleInstance asc
+```
+
+##  Average Disk Read/Write Queue length
+
+Per node average disk read queue length. Helps identifying I/O slowness related to reading data from disk
+
+```
+metrics
+| where cloud_RoleName startswith "SF.Node."
+| where name == "PhysicalDisk(_Total) - Avg. Disk Read Queue Length"
+| summarize Read_Queue_Length=max(value)
+by cloud_RoleInstance, bin(timestamp, 5m)
+| sort by cloud_RoleInstance asc
+```
+
+Similarly, using `name == "PhysicalDisk(_Total) - Avg. Disk Write Queue Length"` will give you write queue stats.
