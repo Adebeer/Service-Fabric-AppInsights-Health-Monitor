@@ -70,6 +70,20 @@ traces
 | sort by node asc
 ```
 
+Alternatively, if you want to do counts by actual type of node stransitions, the below is a good starting point. Note, there are quite a few different transitions beyond simply Up/down that indicate success or failure, so you may wish to accumulate transitions by groups of event names instead. 
+
+```
+traces
+| extend node = tostring(customDimensions.['node'])
+| extend eventName = tostring(customDimensions.['eventName'])
+| extend unit = format_datetime(timestamp, 'MM/dd')
+| where severityLevel <= 3
+| where message contains "StateTransition" 
+| summarize openSucc=countif(eventName == "NodeOpenSucceeded"), openFail=countif(eventName == "NodeOpenFailed"), 
+aborted=countif(eventName == "NodeAborted"), up=countif(eventName == "NodeUp"), down=countif(eventName == "NodeDown") 
+by node, unit
+```
+
 ## Average CPU per SF Node
 
 The below query returns average CPU Total Processor performance counter metrics, averaged over 10 minute time intervals
