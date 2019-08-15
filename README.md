@@ -1,4 +1,4 @@
-# Service-Fabric-AppInsights-Health-Monitor
+# Service Fabric App Insights Health Monitor
 
 Windows Service to send Service Fabric Cluster and Node health information to Azure App Insights. 
 
